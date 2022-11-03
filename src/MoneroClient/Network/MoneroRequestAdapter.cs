@@ -3,20 +3,24 @@ using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using Monero.Client.Constants;
+using Monero.Client.Enums;
 
 namespace Monero.Client.Network
 {
     internal class MoneroRequestAdapter
     {
-        private static readonly JsonSerializerOptions DefaultSerializationOptions = new JsonSerializerOptions() { IgnoreNullValues = true, };
-        private readonly string url;
+        private static readonly JsonSerializerOptions DefaultSerializationOptions = new JsonSerializerOptions()
+        { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
+        private readonly string host;
         private readonly uint port;
 
-        public MoneroRequestAdapter(string url, uint port)
+        public MoneroRequestAdapter(string host, uint port)
         {
-            this.url = url;
+            this.host = host;
             this.port = port;
         }
 
@@ -28,7 +32,7 @@ namespace Monero.Client.Network
             }
 
             var request = GetRequest(subType, requestParams);
-            IUriBuilder uriBuilder = new UriBuilderDirector(new UriBuilder(this.url, this.port, RequestEndpointExtensionRetriever.FetchEndpoint(request)));
+            IUriBuilder uriBuilder = new UriBuilderDirector(new UriBuilder(this.host, this.port, RequestEndpointExtensionRetriever.FetchEndpoint(request)));
             HttpRequestMessage httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, uriBuilder.Build());
             return SerializeRequest(httpRequestMessage, request, token);
         }
@@ -36,7 +40,7 @@ namespace Monero.Client.Network
         public Task<HttpRequestMessage> GetRequestMessage(MoneroResponseSubType subType, GenericRequestParameters requestParams, CancellationToken token)
         {
             var request = GetRequest(subType, requestParams);
-            IUriBuilder uriBuilder = new UriBuilderDirector(new UriBuilder(this.url, this.port, RequestEndpointExtensionRetriever.FetchEndpoint(request)));
+            IUriBuilder uriBuilder = new UriBuilderDirector(new UriBuilder(this.host, this.port, RequestEndpointExtensionRetriever.FetchEndpoint(request)));
             HttpRequestMessage httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, uriBuilder.Build());
             return SerializeRequest(httpRequestMessage, request, token);
         }
@@ -44,7 +48,7 @@ namespace Monero.Client.Network
         public Task<HttpRequestMessage> GetRequestMessage(MoneroResponseSubType subType, dynamic requestParams, CancellationToken token)
         {
             AnonymousRequest request = GetRequest(subType, requestParams);
-            IUriBuilder uriBuilder = new UriBuilderDirector(new UriBuilder(this.url, this.port, RequestEndpointExtensionRetriever.FetchEndpoint(request)));
+            IUriBuilder uriBuilder = new UriBuilderDirector(new UriBuilder(this.host, this.port, RequestEndpointExtensionRetriever.FetchEndpoint(request)));
             HttpRequestMessage httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, uriBuilder.Build());
             return SerializeRequest(httpRequestMessage, request, token);
         }
@@ -568,6 +572,12 @@ namespace Monero.Client.Network
                 {
                     Endpoint = RequestEndpoint.JsonRpc,
                     Method = "get_attribute",
+                    Params = requestParams,
+                },
+                MoneroResponseSubType.ValidateAddress => new BaseRequest
+                {
+                    Endpoint = RequestEndpoint.JsonRpc,
+                    Method = "validate_address",
                     Params = requestParams,
                 },
                 MoneroResponseSubType.SetAttribute => new BaseRequest

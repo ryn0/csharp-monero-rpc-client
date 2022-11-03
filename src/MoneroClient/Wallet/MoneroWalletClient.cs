@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Monero.Client.Enums;
 using Monero.Client.Network;
 using Monero.Client.Utilities;
 using Monero.Client.Wallet.POD;
@@ -14,9 +15,9 @@ namespace Monero.Client.Wallet
         private readonly object disposingLock = new object();
         private bool disposed = false;
 
-        private MoneroWalletClient(string url, uint port)
+        private MoneroWalletClient(string host, uint port)
         {
-            this.moneroRpcCommunicator = new RpcCommunicator(url, port);
+            this.moneroRpcCommunicator = new RpcCommunicator(host, port);
         }
 
         /// <summary>
@@ -30,9 +31,9 @@ namespace Monero.Client.Wallet
         /// <summary>
         /// Initialize a Monero Wallet Client using default network settings (<localhost>:<defaultport>), opening the wallet while doing so.
         /// </summary>
-        public static Task<MoneroWalletClient> CreateAsync(string url, uint port, string filename, string password, CancellationToken cancellationToken = default)
+        public static Task<MoneroWalletClient> CreateAsync(string host, uint port, string filename, string password, CancellationToken cancellationToken = default)
         {
-            var moneroWalletClient = new MoneroWalletClient(url, port);
+            var moneroWalletClient = new MoneroWalletClient(host, port);
             return moneroWalletClient.InitializeAsync(filename, password, cancellationToken);
         }
 
@@ -40,6 +41,12 @@ namespace Monero.Client.Wallet
         {
             var moneroWalletClient = new MoneroWalletClient(networkType);
             return moneroWalletClient.InitializeAsync(filename, password, cancellationToken);
+        }
+
+        public static Task<CreateWallet> CreateNewWalletAsync(string host, uint port, string filename, string password, string language, CancellationToken cancellationToken = default)
+        {
+            using var moneroWalletClient = new MoneroWalletClient(host, port);
+            return moneroWalletClient.CreateWalletAsync(filename, language, password, cancellationToken);
         }
 
         /// <summary>
@@ -284,7 +291,7 @@ namespace Monero.Client.Wallet
         }
 
         /// <summary>
-        /// <see cref="TransferSplitAsync(IEnumerable{(string address, ulong amount)}, TransferPriority, bool, CancellationToken)"/>
+        /// <see cref="TransferSplitAsync(IEnumerable{(string address, ulong amount)}, TransferPriority, bool, CancellationToken)"/>.
         /// </summary>
         public async Task<SplitFundTransfer> TransferSplitAsync(IEnumerable<(string address, ulong amount)> transactions, TransferPriority transferPriority, bool getTxKey, bool getTxHex, bool newAlgorithm = true, ulong unlockTime = 0, CancellationToken token = default)
         {
@@ -295,7 +302,7 @@ namespace Monero.Client.Wallet
         }
 
         /// <summary>
-        /// <see cref="TransferSplitAsync(IEnumerable{(string address, ulong amount)}, TransferPriority, bool, CancellationToken)"/>
+        /// <see cref="TransferSplitAsync(IEnumerable{(string address, ulong amount)}, TransferPriority, bool, CancellationToken)"/>.
         /// </summary>
         public async Task<SplitFundTransfer> TransferSplitAsync(IEnumerable<(string address, ulong amount)> transactions, TransferPriority transferPriority, uint ringSize, bool newAlgorithm = true, ulong unlockTime = 0, bool getTxKey = true, bool getTxHex = true, CancellationToken token = default)
         {
@@ -306,7 +313,7 @@ namespace Monero.Client.Wallet
         }
 
         /// <summary>
-        /// <see cref="TransferSplitAsync(IEnumerable{(string address, ulong amount)}, TransferPriority, bool, CancellationToken)"/>
+        /// <see cref="TransferSplitAsync(IEnumerable{(string address, ulong amount)}, TransferPriority, bool, CancellationToken)"/>.
         /// </summary>
         public async Task<SplitFundTransfer> TransferSplitAsync(IEnumerable<(string address, ulong amount)> transactions, TransferPriority transferPriority, uint ringSize, uint accountIndex, bool newAlgorithm = true, ulong unlockTime = 0, bool getTxKey = true, bool getTxHex = true, CancellationToken token = default)
         {
@@ -740,7 +747,7 @@ namespace Monero.Client.Wallet
         /// <summary>
         /// Turn this wallet into a multisig wallet, extra step for N-1/N wallets.
         /// </summary>
-        /// <param name="multisigInfo">List of multisig string from peers.</param>
+        /// <param name="multiSigInfo">List of multisig string from peers.</param>
         /// <param name="password">Wallet password.</param>
         /// <returns>The multisig wallet address.</returns>
         public async Task<string> FinalizeMultiSigAsync(IEnumerable<string> multiSigInfo, string password, CancellationToken token = default)
@@ -814,7 +821,7 @@ namespace Monero.Client.Wallet
         }
 
         /// <summary>
-        /// Set an attribute (key/value pair) to store any additional info in the wallet
+        /// Set an attribute (key/value pair) to store any additional info in the wallet.
         /// </summary>
         public async Task SetAttributeAsync(string key, string value, CancellationToken token = default)
         {
@@ -823,13 +830,27 @@ namespace Monero.Client.Wallet
         }
 
         /// <summary>
-        /// Get an attribute value from the wallet, given its key; throws an error if not present
+        /// Get an attribute value from the wallet, given its key; throws an error if not present.
         /// </summary>
         public async Task<string> GetAttributeAsync(string key, CancellationToken token = default)
         {
             var result = await this.moneroRpcCommunicator.GetAttributeAsync(key, token).ConfigureAwait(false);
             ErrorGuard.ThrowIfResultIsNull(result?.GetAttributeResponse, nameof(this.GetAttributeAsync));
             return result.GetAttributeResponse.Result.Value;
+        }
+
+        /// <summary>
+        /// Analyzes a string to determine whether it is a valid monero wallet address and returns the result and the address specifications.
+        /// </summary>
+        /// <param name="address">The address to validate.</param>
+        /// <param name="any_net_type">If true, consider addresses belonging to any of the three Monero networks (mainnet, stagenet, and testnet) valid. Otherwise, only consider an address valid if it belongs to the network on which the rpc-wallet's current daemon is running (Defaults to false).</param>
+        /// <param name="allow_openalias">If true, consider OpenAlias-formatted addresses valid (Defaults to false).</param>
+        /// <param name="token">A CancellationToken.</param>
+        public async Task<ValidateAddress> ValidateAddressAsync(string address, bool any_net_type = false, bool allow_openalias = false, CancellationToken token = default)
+        {
+            var result = await this.moneroRpcCommunicator.ValidateAddressAsync(address, any_net_type, allow_openalias, token).ConfigureAwait(false);
+            ErrorGuard.ThrowIfResultIsNull(result?.ValidateAddressResponse, nameof(this.ValidateAddressAsync));
+            return result.ValidateAddressResponse.Result;
         }
 
         protected virtual void Dispose(bool disposing)

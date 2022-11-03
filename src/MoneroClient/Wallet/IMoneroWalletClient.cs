@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Monero.Client.Enums;
 using Monero.Client.Wallet.POD;
 using Monero.Client.Wallet.POD.Responses;
 
@@ -86,5 +87,6 @@ namespace Monero.Client.Wallet
         Task<List<PaymentDetail>> GetPaymentDetailAsync(string paymentId, CancellationToken token = default);
         Task SetAttributeAsync(string key, string value, CancellationToken token = default);
         Task<string> GetAttributeAsync(string key, CancellationToken token = default);
+        Task<ValidateAddress> ValidateAddressAsync(string address, bool any_net_type = false, bool allow_openalias = false, CancellationToken token = default);
     }
 }

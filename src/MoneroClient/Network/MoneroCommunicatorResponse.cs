@@ -1,131 +1,16 @@
 ﻿using Monero.Client.Daemon.POD;
 using Monero.Client.Daemon.POD.Responses;
+using Monero.Client.Enums;
 using Monero.Client.Wallet.POD.Responses;
 
 namespace Monero.Client.Network
 {
-    internal enum MoneroResponseType
-    {
-        None,
-        Block,
-        BlockCount,
-        BlockHeader,
-        BlockHeaderRange,
-        Connection,
-        Information,
-        TransactionPool,
-        Coinbase,
-        Blockchain,
-        Transaction,
-        Account,
-        Address,
-        Wallet,
-        Daemon,
-        Miscellaneous,
-    }
-
-    internal enum MoneroResponseSubType
-    {
-        // Daemon
-        Block,
-        BlockCount,
-        BlockHeaderByHash,
-        BlockHeaderByHeight,
-        BlockHeaderByRange,
-        BlockHeaderByRecency, // Last Block Header.
-        AllConnections,
-        NodeInformation,
-        HardforkInformation,
-        BanInformation,
-        FlushTransactionPool,
-        OutputHistogram,
-        CoinbaseTransactionSum,
-        DaemonVersion,
-        FeeEstimate,
-        AlternateChain,
-        RelayTransaction,
-        SyncInformation,
-        SetBans,
-        SubmitBlock,
-        GetBlockTemplate,
-        GetBanStatus, // Status on the ban of an address.
-        PruneBlockchain,
-        TransactionPoolBacklog,
-        Transactions,
-        TransactionPoolTransactions,
-
-        // Wallet
-        Balance,
-        Address,
-        AddressIndex,
-        AddressCreation,
-        AddressLabeling,
-        Account,
-        AccountCreation,
-        AccountLabeling,
-        AccountTags,
-        AccountTagging,
-        AccountUntagging,
-        AccountTagAndDescriptionSetting,
-        Height,
-        FundTransfer,
-        FundTransferSplit,
-        SignTransfer,   // Cold-signing process.
-        SubmitTransfer, // Cold-signing process.
-        SweepDust,
-        SweepAll,
-        SaveWallet,
-        StopWallet,
-        IncomingTransfers,
-        QueryPrivateKey,
-        SetTransactionNotes,
-        GetTransactionNotes,
-        GetTransactionKey,
-        CheckTransactionKey,
-        Transfers,
-        TransferByTxid,
-        Sign,
-        Verify,
-        ImportOutputs,
-        ExportOutputs,
-        ImportKeyImages,
-        ExportKeyImages,
-        MakeUri,
-        ParseUri,
-        GetAddressBook,
-        AddAddressBook,
-        DeleteAddressBook,
-        Refresh,
-        RescanSpent,
-        Languages,
-        CreateWallet,
-        OpenWallet,
-        CloseWallet,
-        ChangeWalletPassword,
-        RpcVersion,
-        IsMultiSig,
-        PrepareMultiSig,
-        MakeMultiSig,
-        ExportMultiSigInfo,
-        ImportMultiSigInfo,
-        FinalizeMultiSig,
-        SignMultiSigTransaction,
-        SubmitMultiSigTransaction,
-        DescribeTransfer,
-        SweepSingle,
-        GetPaymentDetail,
-        GetAttribute,
-        SetAttribute
-    }
-
     internal class MoneroCommunicatorResponse
     {
         internal MoneroResponseType MoneroResponseType { get; set; } = MoneroResponseType.None;
         internal MoneroResponseSubType MoneroResponseSubType { get; set; }
 
-        ///
-        /// Daemon-related responses.
-        ///
+        // Daemon-related responses.
         internal BlockCountResponse BlockCountResponse { get; set; }
         internal BlockHeaderResponse BlockHeaderResponse { get; set; }
         internal BlockHeaderRangeResponse BlockHeaderRangeResponse { get; set; }
@@ -151,9 +36,7 @@ namespace Monero.Client.Network
         internal TransactionSet TransactionsResponse { get; set; }
         internal TransactionPool TransactionPoolResponse { get; set; }
 
-        ///
-        /// Wallet-related responses.
-        ///
+        // Wallet-related responses.
         internal BalanceResponse BalanceResponse { get; set; }
         internal AddressResponse AddressResponse { get; set; }
         internal AddressIndexResponse AddressIndexResponse { get; set; }
@@ -215,5 +98,6 @@ namespace Monero.Client.Network
         internal PaymentDetailResponse PaymentDetailResponse { get; set; }
         internal SetAttributeResponse SetAttributeResponse { get; set; }
         internal GetAttributeResponse GetAttributeResponse { get; set; }
+        internal ValidateAddressResponse ValidateAddressResponse { get; set; }
     }
 }

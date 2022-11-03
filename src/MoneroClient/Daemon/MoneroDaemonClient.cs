@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Monero.Client.Daemon.POD;
 using Monero.Client.Daemon.POD.Responses;
+using Monero.Client.Enums;
 using Monero.Client.Network;
 using Monero.Client.Utilities;
 
@@ -15,9 +16,9 @@ namespace Monero.Client.Daemon
         private readonly object disposalLock = new object();
         private bool disposed = false;
 
-        private MoneroDaemonClient(string url, uint port)
+        private MoneroDaemonClient(string host, uint port)
         {
-            this.moneroRpcCommunicator = new RpcCommunicator(url, port);
+            this.moneroRpcCommunicator = new RpcCommunicator(host, port);
         }
 
         /// <summary>
@@ -29,9 +30,9 @@ namespace Monero.Client.Daemon
             this.moneroRpcCommunicator = new RpcCommunicator(networkType, ConnectionType.Daemon);
         }
 
-        public static Task<MoneroDaemonClient> CreateAsync(string url, uint port, CancellationToken cancellationToken = default)
+        public static Task<MoneroDaemonClient> CreateAsync(string host, uint port, CancellationToken cancellationToken = default)
         {
-            var moneroDaemonClient = new MoneroDaemonClient(url, port);
+            var moneroDaemonClient = new MoneroDaemonClient(host, port);
             return moneroDaemonClient.InitializeAsync(cancellationToken);
         }
 

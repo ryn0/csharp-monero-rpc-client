@@ -4,11 +4,13 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Monero.Client.Daemon.POD;
 using Monero.Client.Daemon.POD.Requests;
 using Monero.Client.Daemon.POD.Responses;
+using Monero.Client.Enums;
 using Monero.Client.Network;
 using Monero.Client.Wallet.POD;
 using Monero.Client.Wallet.POD.Requests;
@@ -16,35 +18,30 @@ using Monero.Client.Wallet.POD.Responses;
 
 namespace Monero.Client.Utilities
 {
-    internal enum ConnectionType
-    {
-        Wallet,
-        Daemon,
-    }
-
     internal class RpcCommunicator
     {
         private readonly HttpClient httpClient;
         private readonly MoneroRequestAdapter requestAdapter;
-        private readonly JsonSerializerOptions defaultSerializationOptions = new JsonSerializerOptions() { IgnoreNullValues = true, };
+        private readonly JsonSerializerOptions defaultSerializationOptions = new JsonSerializerOptions()
+        { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
 
-        /// <param name="url">A string representation of the host you'd like to connect to (e.g. "127.0.0.1")</param>
-        /// <param name="port">An integer representation of the host's port you'd like to communicate on (e.g. 18081)</param>
-        public RpcCommunicator(string url, uint port) : this()
+        /// <param name="host">A string representation of the host you'd like to connect to (e.g. "127.0.0.1").</param>
+        /// <param name="port">An integer representation of the host's port you'd like to communicate on (e.g. 18081).</param>
+        public RpcCommunicator(string host, uint port) : this()
         {
-            this.requestAdapter = new MoneroRequestAdapter(url, port);
+            this.requestAdapter = new MoneroRequestAdapter(host, port);
         }
 
         public RpcCommunicator(MoneroNetwork networkType, ConnectionType connectionType) : this()
         {
             this.requestAdapter = (connectionType, networkType) switch
             {
-                (ConnectionType.Daemon, MoneroNetwork.Mainnet) => new MoneroRequestAdapter(MoneroNetworkDefaults.DaemonMainnetUrl, MoneroNetworkDefaults.DaemonMainnetPort),
-                (ConnectionType.Daemon, MoneroNetwork.Stagenet) => new MoneroRequestAdapter(MoneroNetworkDefaults.DaemonStagenetUrl, MoneroNetworkDefaults.DaemonStagenetPort),
-                (ConnectionType.Daemon, MoneroNetwork.Testnet) => new MoneroRequestAdapter(MoneroNetworkDefaults.DaemonTestnetUrl, MoneroNetworkDefaults.DaemonTestnetPort),
-                (ConnectionType.Wallet, MoneroNetwork.Mainnet) => new MoneroRequestAdapter(MoneroNetworkDefaults.WalletMainnetUrl, MoneroNetworkDefaults.WalletMainnetPort),
-                (ConnectionType.Wallet, MoneroNetwork.Stagenet) => new MoneroRequestAdapter(MoneroNetworkDefaults.WalletStagenetUrl, MoneroNetworkDefaults.WalletStagenetPort),
-                (ConnectionType.Wallet, MoneroNetwork.Testnet) => new MoneroRequestAdapter(MoneroNetworkDefaults.WalletTestnetUrl, MoneroNetworkDefaults.WalletTestnetPort),
+                (ConnectionType.Daemon, MoneroNetwork.Mainnet) => new MoneroRequestAdapter(MoneroNetworkDefaults.DaemonMainnetHost, MoneroNetworkDefaults.DaemonMainnetPort),
+                (ConnectionType.Daemon, MoneroNetwork.Stagenet) => new MoneroRequestAdapter(MoneroNetworkDefaults.DaemonStagenetHost, MoneroNetworkDefaults.DaemonStagenetPort),
+                (ConnectionType.Daemon, MoneroNetwork.Testnet) => new MoneroRequestAdapter(MoneroNetworkDefaults.DaemonTestnetHost, MoneroNetworkDefaults.DaemonTestnetPort),
+                (ConnectionType.Wallet, MoneroNetwork.Mainnet) => new MoneroRequestAdapter(MoneroNetworkDefaults.WalletMainnetHost, MoneroNetworkDefaults.WalletMainnetPort),
+                (ConnectionType.Wallet, MoneroNetwork.Stagenet) => new MoneroRequestAdapter(MoneroNetworkDefaults.WalletStagenetHost, MoneroNetworkDefaults.WalletStagenetPort),
+                (ConnectionType.Wallet, MoneroNetwork.Testnet) => new MoneroRequestAdapter(MoneroNetworkDefaults.WalletTestnetHost, MoneroNetworkDefaults.WalletTestnetPort),
                 (_, _) => throw new InvalidOperationException($"Unknown MoneroNetwork ({networkType}) and ConnectionType ({connectionType}) combination"),
             };
         }
@@ -328,7 +325,7 @@ namespace Monero.Client.Utilities
         {
             if (accounts == null || !accounts.Any())
             {
-                throw new InvalidOperationException("Accounts is either null or empty");
+                throw new InvalidOperationException($"{nameof(accounts)} is either null or empty");
             }
 
             var genericRequestParameters = new GenericRequestParameters()
@@ -1641,7 +1638,7 @@ namespace Monero.Client.Utilities
         {
             var daemonRequestParameters = new GenericRequestParameters()
             {
-                Bans = this.BanInformationToBans(bans)
+                Bans = BanInformationToBans(bans)
             };
             HttpRequestMessage request = await this.requestAdapter.GetRequestMessage(MoneroResponseSubType.SetBans, daemonRequestParameters, token).ConfigureAwait(false);
             HttpResponseMessage response = await this.httpClient.SendAsync(request, HttpCompletionOption.ResponseContentRead, token).ConfigureAwait(false);
@@ -1860,6 +1857,29 @@ namespace Monero.Client.Utilities
             };
         }
 
+        public async Task<MoneroCommunicatorResponse> ValidateAddressAsync(string address, bool any_net_type = false, bool allow_openalias = false, CancellationToken token = default)
+        {
+            var daemonRequestParameters = new GenericRequestParameters()
+            {
+                Address = address,
+                AnyNetType = any_net_type,
+                AllowOpenAlias = allow_openalias
+            };
+            HttpRequestMessage request = await this.requestAdapter.GetRequestMessage(MoneroResponseSubType.ValidateAddress, daemonRequestParameters, token).ConfigureAwait(false);
+            HttpResponseMessage response = await this.httpClient.SendAsync(request, HttpCompletionOption.ResponseContentRead, token).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            string responseBody = await response.Content.ReadAsStringAsync();
+
+            using Stream ms = await ByteArrayToMemoryStream(response).ConfigureAwait(false);
+            ValidateAddressResponse responseObject = await JsonSerializer.DeserializeAsync<ValidateAddressResponse>(ms, this.defaultSerializationOptions, token).ConfigureAwait(false);
+            return new MoneroCommunicatorResponse()
+            {
+                MoneroResponseType = MoneroResponseType.Wallet,
+                MoneroResponseSubType = MoneroResponseSubType.ValidateAddress,
+                ValidateAddressResponse = responseObject,
+            };
+        }
+
         public async Task<MoneroCommunicatorResponse> GetTransactionPoolAsync(CancellationToken token = default)
         {
             HttpRequestMessage request = await this.requestAdapter.GetRequestMessage(MoneroResponseSubType.TransactionPoolTransactions, null, token).ConfigureAwait(false);
@@ -1941,6 +1961,23 @@ namespace Monero.Client.Utilities
             return signedKeyImages;
         }
 
+        private static List<NodeBan> BanInformationToBans(IEnumerable<(string host, ulong ip, bool ban, uint seconds)> bans)
+        {
+            var requestBans = new List<NodeBan>();
+            foreach (var ban in bans)
+            {
+                requestBans.Add(new NodeBan()
+                {
+                    Host = ban.host,
+                    IP = ban.ip,
+                    IsBanned = ban.ban,
+                    Seconds = ban.seconds,
+                });
+            }
+
+            return requestBans;
+        }
+
         private async Task<MoneroCommunicatorResponse> GetBalanceAsync(GenericRequestParameters genericRequestParameters, CancellationToken token)
         {
             HttpRequestMessage request = await this.requestAdapter.GetRequestMessage(MoneroResponseSubType.Balance, genericRequestParameters, token).ConfigureAwait(false);
@@ -2014,23 +2051,6 @@ namespace Monero.Client.Utilities
                 MoneroResponseSubType = MoneroResponseSubType.FundTransferSplit,
                 FundTransferSplitResponse = responseObject,
             };
-        }
-
-        private List<NodeBan> BanInformationToBans(IEnumerable<(string host, ulong ip, bool ban, uint seconds)> bans)
-        {
-            var requestBans = new List<NodeBan>();
-            foreach (var ban in bans)
-            {
-                requestBans.Add(new NodeBan()
-                {
-                    Host = ban.host,
-                    IP = ban.ip,
-                    IsBanned = ban.ban,
-                    Seconds = ban.seconds,
-                });
-            }
-
-            return requestBans;
         }
 
         private async Task<MoneroCommunicatorResponse> GetTransfersAsync(GenericRequestParameters genericRequestParameters, CancellationToken token)
