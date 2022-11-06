@@ -85,7 +85,7 @@ namespace MoneroClient.IntegrationTests.WalletTests
         }
 
         [Fact]
-        public async Task MoneroWalletClient_ValidTestNetAddres_ReturnsValid()
+        public async Task MoneroWalletClient_ValidTestNetAddress_ReturnsValid()
         {
             // Arrange
             var fileName = "test_0b395a87-583b-41bb-a7dc-1eed1ba47ef3";
