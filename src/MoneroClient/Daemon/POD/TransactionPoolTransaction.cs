@@ -1,6 +1,6 @@
-﻿using Monero.Client.Constants;
-using System;
+﻿using System;
 using System.Text.Json.Serialization;
+using Monero.Client.Constants;
 
 namespace Monero.Client.Daemon.POD
 {
