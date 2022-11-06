@@ -35,7 +35,6 @@ namespace MoneroClient.IntegrationTests.WalletTests
 
             // Assert
             Assert.Equal(25, words.Length);
-            Assert.True(true);
         }
 
         [Fact]
