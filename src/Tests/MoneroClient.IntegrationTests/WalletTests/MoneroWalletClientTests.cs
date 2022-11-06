@@ -31,6 +31,7 @@ namespace MoneroClient.IntegrationTests.WalletTests
                     TestingConstants.DefaultLanguage,
                     walletPassword);
             var mnemonicPhrase = await walletClient.GetPrivateKey(KeyType.Mnemonic);
+            walletClient.Dispose();
             var words = mnemonicPhrase.Split(' ');
 
             // Assert
@@ -51,6 +52,7 @@ namespace MoneroClient.IntegrationTests.WalletTests
                 fileName,
                 walletPassword);
             var accounts = await walletClient.GetAccountsAsync();
+            walletClient.Dispose();
 
             // Assert
             Assert.True(accounts.TotalBalance > 0);
@@ -79,13 +81,14 @@ namespace MoneroClient.IntegrationTests.WalletTests
                 addressWithAmount,
                 TransferPriority.Unimportant).ConfigureAwait(false);
             var balanceAfterSending = await walletClient.GetBalanceAsync(0);
+            walletClient.Dispose();
 
             // Assert
             Assert.True(balanceBeforeSending.TotalBalance > balanceAfterSending.TotalBalance);
         }
 
         [Fact]
-        public async Task MoneroWalletClient_ValidTestNetAddres_ReturnsValid()
+        public async Task MoneroWalletClient_ValidTestNetAddress_ReturnsValid()
         {
             // Arrange
             var fileName = "test_0b395a87-583b-41bb-a7dc-1eed1ba47ef3";
@@ -98,6 +101,7 @@ namespace MoneroClient.IntegrationTests.WalletTests
                 fileName,
                 walletPassword);
             var validationResult = await walletClient.ValidateAddressAsync("9vTA787Xnw8Uxa4LoNwAR4MZmhtDymQCU6EZ3q1g6yCRBv62UKuN9PG2CX4sotUehjBfAY487fL2eJQoaPzStnF5SxEzcYi");
+            walletClient.Dispose();
 
             // Assert
             Assert.True(validationResult.Valid);
